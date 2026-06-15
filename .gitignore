@@ -1,0 +1,53 @@
+# Build output
+bin/
+obj/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+.dtbcache.v2
+*.vcxproj.filters
+
+# Rider / JetBrains
+.idea/
+*.sln.iml
+
+# dotnet publish / runtime
+publish/
+runtimes/
+
+# Debug symbols and binaries
+*.pdb
+*.exe
+*.dll
+!**/wwwroot/**/*.dll
+
+# Environment-specific config (contains secrets)
+appsettings.Development.json
+appsettings.*.json
+!appsettings.json
+
+# Docker overrides (local-only)
+docker-compose.override.yml
+
+# NuGet
+*.nupkg
+*.snupkg
+.nuget/
+packages/
+nuget.config
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+*~

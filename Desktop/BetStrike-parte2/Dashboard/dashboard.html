@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>BetStrike · Ops Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:ital,wght@0,300;0,500;0,700;1,700&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+/* ── TOKENS ─────────────────────────────────────────────────── */
+:root {
+  --bg:        #080c10;
+  --surface:   #0d1117;
+  --surface2:  #161b22;
+  --border:    #21262d;
+  --text:      #e6edf3;
+  --muted:     #7d8590;
+  --accent:    #f85149;
+  --accent2:   #238636;
+  --warn:      #d29922;
+  --blue:      #388bfd;
+  --mono:      'Space Mono', monospace;
+  --sans:      'DM Sans', sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ── SCROLLBAR ───────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* ── HEADER ─────────────────────────────────────────────────── */
+header {
+  position: sticky; top: 0; z-index: 100;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  height: 52px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+
+.logo {
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--text);
+  letter-spacing: -0.03em;
+  display: flex; align-items: center; gap: 10px;
+}
+.logo-tag {
+  background: #f8514920;
+  border: 1px solid #f8514940;
+  color: var(--accent);
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-family: var(--mono);
+  letter-spacing: 0.08em;
+}
+
+.header-right {
+  display: flex; align-items: center; gap: 16px;
+}
+
+.status-pill {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+}
+.status-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--muted);
+  transition: background 0.3s;
+}
+.status-dot.ok  { background: var(--accent2); box-shadow: 0 0 6px var(--accent2); }
+.status-dot.err { background: var(--accent);  box-shadow: 0 0 6px var(--accent); }
+
+input.api-input {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  width: 200px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+input.api-input:focus { border-color: var(--blue); color: var(--text); }
+
+/* ── MAIN GRID ───────────────────────────────────────────────── */
+main {
+  padding: 20px 24px;
+  max-width: 1600px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── CARDS ───────────────────────────────────────────────────── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px 20px;
+}
+.card-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 14px;
+}
+.card-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+}
+
+/* ── MÉTRICAS ────────────────────────────────────────────────── */
+.metrics-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+}
+.metric {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+  position: relative;
+  overflow: hidden;
+}
+.metric::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--border), transparent);
+}
+.metric.accent::before  { background: linear-gradient(90deg, transparent, var(--accent),  transparent); }
+.metric.green::before   { background: linear-gradient(90deg, transparent, var(--accent2), transparent); }
+.metric.blue::before    { background: linear-gradient(90deg, transparent, var(--blue),    transparent); }
+.metric.warn::before    { background: linear-gradient(90deg, transparent, var(--warn),    transparent); }
+
+.metric-label {
+  font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.1em;
+  color: var(--muted); margin-bottom: 8px;
+}
+.metric-value {
+  font-family: var(--mono);
+  font-size: 26px; font-weight: 700;
+  color: var(--text);
+  line-height: 1;
+}
+.metric-sub {
+  font-size: 10px; color: var(--muted); margin-top: 4px;
+}
+
+/* ── JANELA SELECTOR ─────────────────────────────────────────── */
+.window-tabs {
+  display: flex; gap: 4px;
+}
+.window-tab {
+  font-family: var(--mono);
+  font-size: 10px; font-weight: 700;
+  padding: 3px 10px; border-radius: 4px;
+  border: 1px solid var(--border);
+  background: transparent; color: var(--muted);
+  cursor: pointer; transition: all 0.15s;
+}
+.window-tab:hover { border-color: var(--blue); color: var(--blue); }
+.window-tab.active { background: var(--blue); border-color: var(--blue); color: #fff; }
+
+/* ── GRID PRINCIPAL ──────────────────────────────────────────── */
+.main-grid {
+  display: grid;
+  grid-template-columns: 1fr 320px 280px;
+  gap: 12px;
+}
+
+/* ── JOGOS ───────────────────────────────────────────────────── */
+.jogo-item {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  display: grid;
+  grid-template-columns: 10px 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+}
+.jogo-item:last-child { border-bottom: none; }
+
+.estado-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+}
+.dot-live  { background: var(--accent);  animation: blink 1.4s infinite; }
+.dot-sched { background: var(--blue); }
+.dot-done  { background: var(--muted); }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+.jogo-nome {
+  font-size: 12px; font-weight: 700; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.jogo-meta {
+  font-size: 10px; color: var(--muted); margin-top: 1px;
+  font-family: var(--mono);
+}
+.jogo-score {
+  font-family: var(--mono); font-size: 14px; font-weight: 700;
+  color: var(--text); text-align: right;
+  white-space: nowrap;
+}
+.jogo-exp {
+  font-family: var(--mono); font-size: 10px;
+  text-align: right; white-space: nowrap;
+}
+.jogo-exp.high { color: var(--accent); }
+.jogo-exp.normal { color: var(--muted); }
+
+/* ── BADGE ───────────────────────────────────────────────────── */
+.badge {
+  font-family: var(--mono); font-size: 9px; font-weight: 700;
+  padding: 2px 6px; border-radius: 3px; letter-spacing: 0.06em;
+}
+.badge-live  { background: #f8514918; color: var(--accent); border: 1px solid #f8514930; }
+.badge-sched { background: #388bfd18; color: var(--blue);   border: 1px solid #388bfd30; }
+.badge-done  { background: #30363d;   color: var(--muted);  border: 1px solid var(--border); }
+
+/* ── DISTRIBUIÇÃO ────────────────────────────────────────────── */
+.dist-row {
+  margin-bottom: 10px;
+}
+.dist-label {
+  display: flex; justify-content: space-between;
+  font-size: 11px; margin-bottom: 4px;
+}
+.dist-label span:first-child { color: var(--muted); font-weight: 500; }
+.dist-label span:last-child  { font-family: var(--mono); font-size: 10px; font-weight: 700; color: var(--text); }
+.dist-track {
+  height: 5px; background: var(--surface2);
+  border-radius: 3px; overflow: hidden;
+}
+.dist-fill {
+  height: 100%; border-radius: 3px;
+  transition: width 0.6s cubic-bezier(.4,0,.2,1);
+}
+
+.stat-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 7px 0; border-bottom: 1px solid var(--border);
+}
+.stat-row:last-child { border-bottom: none; }
+.stat-row span:first-child { font-size: 11px; color: var(--muted); }
+.stat-row span:last-child  { font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--text); }
+
+/* ── ALERTAS ─────────────────────────────────────────────────── */
+.alert-item {
+  background: #f8514910;
+  border: 1px solid #f8514928;
+  border-left: 3px solid var(--accent);
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+}
+.alert-item.warn {
+  background: #d2992210;
+  border-color: #d2992228;
+  border-left-color: var(--warn);
+}
+.alert-tipo  { font-family: var(--mono); font-size: 9px; font-weight: 700; color: var(--accent); letter-spacing: 0.1em; }
+.alert-item.warn .alert-tipo { color: var(--warn); }
+.alert-msg   { font-size: 11px; color: #fca5a5; margin-top: 3px; line-height: 1.4; }
+.alert-item.warn .alert-msg { color: #fcd34d; }
+.alert-time  { font-family: var(--mono); font-size: 9px; color: var(--muted); margin-top: 4px; }
+
+/* ── GRÁFICOS ────────────────────────────────────────────────── */
+.charts-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 12px;
+}
+
+/* ── EMPTY STATE ─────────────────────────────────────────────── */
+.empty {
+  text-align: center; padding: 24px 0;
+  font-size: 12px; color: var(--muted);
+  font-style: italic;
+}
+
+/* ── OVERFLOW LIST ───────────────────────────────────────────── */
+.overflow-list {
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+/* ── RESULTADOS FINALIZADOS ──────────────────────────────────────────────── */
+.results-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 10px;
+}
+.result-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+.result-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 8px;
+}
+.result-equipas { font-size: 12px; font-weight: 700; color: var(--text); }
+.result-comp    { font-size: 9px; color: var(--muted); margin-top: 1px; font-family: var(--mono); }
+.result-score {
+  font-family: var(--mono); font-size: 20px; font-weight: 700;
+  color: var(--accent); white-space: nowrap;
+}
+.result-outcome {
+  display: inline-block;
+  font-family: var(--mono); font-size: 9px; font-weight: 700;
+  padding: 2px 7px; border-radius: 3px; letter-spacing: .06em; margin-top: 2px;
+}
+.out-1 { background: rgba(56,139,253,.12); color: #388bfd; border: 1px solid rgba(56,139,253,.25); }
+.out-X { background: rgba(239,159,39,.12);  color: #EF9F27; border: 1px solid rgba(239,159,39,.25); }
+.out-2 { background: rgba(248,81,73,.12);   color: var(--accent); border: 1px solid rgba(248,81,73,.25); }
+.result-stats {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 4px 12px; margin-top: 10px;
+  border-top: 1px solid var(--border); padding-top: 8px;
+}
+.rs { display: flex; flex-direction: column; }
+.rs-label { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+.rs-val   { font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--text); margin-top: 1px; }
+.rs-val.green  { color: var(--accent2); }
+.rs-val.accent { color: var(--accent); }
+.rs-val.warn   { color: var(--warn); }
+.result-apostas {
+  display: flex; gap: 6px; margin-top: 8px;
+}
+.ap-pill {
+  flex: 1; text-align: center; padding: 4px 0; border-radius: 5px;
+  font-family: var(--mono); font-size: 10px; font-weight: 700;
+}
+.ap-ganhas  { background: rgba(29,158,117,.12); color: var(--accent2); border: 1px solid rgba(29,158,117,.2); }
+.ap-perdidas{ background: rgba(248,81,73,.10);  color: var(--accent);  border: 1px solid rgba(248,81,73,.2); }
+.ap-anuladas{ background: rgba(125,133,144,.1); color: var(--muted);   border: 1px solid var(--border); }
+.finalizados-empty { text-align: center; padding: 20px; font-size: 12px; color: var(--muted); font-style: italic; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    BetStrike
+    <span class="logo-tag">OPS</span>
+  </div>
+  <div class="header-right">
+    <div class="status-pill">
+      <div class="status-dot" id="status-dot"></div>
+      <span id="status-txt">offline</span>
+    </div>
+    <span id="last-update" style="font-family:var(--mono);font-size:10px;color:var(--muted);">—</span>
+    <input class="api-input" id="api-url" value="http://localhost:53386" placeholder="http://api:port"/>
+  </div>
+</header>
+
+<main>
+
+  <!-- JANELA TEMPORAL -->
+  <div style="display:flex;align-items:center;justify-content:space-between;">
+    <div class="card-label" style="margin:0;">Janela de análise</div>
+    <div class="window-tabs">
+      <button class="window-tab active" onclick="setJanela(1,this)">1 min</button>
+      <button class="window-tab" onclick="setJanela(5,this)">5 min</button>
+      <button class="window-tab" onclick="setJanela(15,this)">15 min</button>
+      <button class="window-tab" onclick="setJanela(60,this)">60 min</button>
+    </div>
+  </div>
+
+  <!-- MÉTRICAS -->
+  <div class="metrics-row">
+    <div class="metric accent">
+      <div class="metric-label">Apostas / min</div>
+      <div class="metric-value" id="m-apm">—</div>
+      <div class="metric-sub">na janela selecionada</div>
+    </div>
+    <div class="metric green">
+      <div class="metric-label">Volume apostado</div>
+      <div class="metric-value" id="m-vol">—</div>
+      <div class="metric-sub">na janela selecionada</div>
+    </div>
+    <div class="metric warn">
+      <div class="metric-label">Exposição total</div>
+      <div class="metric-value" id="m-exp">—</div>
+      <div class="metric-sub">máx. a pagar se todos ganham</div>
+    </div>
+    <div class="metric blue">
+      <div class="metric-label">Jogos em curso</div>
+      <div class="metric-value" id="m-live">—</div>
+      <div class="metric-sub" id="m-agendados">— agendados</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Utilizadores ativos</div>
+      <div class="metric-value" id="m-users">—</div>
+      <div class="metric-sub">na janela selecionada</div>
+    </div>
+  </div>
+
+  <!-- LINHA PRINCIPAL: jogos + analytics + alertas -->
+  <div class="main-grid">
+
+    <!-- JOGOS -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-label">Jogos ativos</span>
+        <span id="jogos-count" style="font-family:var(--mono);font-size:10px;color:var(--muted);">—</span>
+      </div>
+      <div class="overflow-list" id="jogos-lista">
+        <div class="empty">A aguardar eventos Kafka...</div>
+      </div>
+    </div>
+
+    <!-- ANALYTICS -->
+    <div class="card" style="display:flex;flex-direction:column;gap:16px;">
+      <div class="card-header" style="margin-bottom:0;">
+        <span class="card-label">Distribuição apostas</span>
+      </div>
+
+      <!-- barras -->
+      <div id="dist-container">
+        <div class="dist-row">
+          <div class="dist-label">
+            <span>Vitória Casa (1)</span>
+            <span id="dist-1">—%</span>
+          </div>
+          <div class="dist-track">
+            <div class="dist-fill" id="bar-1" style="width:33%;background:var(--blue);"></div>
+          </div>
+        </div>
+        <div class="dist-row">
+          <div class="dist-label">
+            <span>Empate (X)</span>
+            <span id="dist-X">—%</span>
+          </div>
+          <div class="dist-track">
+            <div class="dist-fill" id="bar-X" style="width:33%;background:var(--warn);"></div>
+          </div>
+        </div>
+        <div class="dist-row">
+          <div class="dist-label">
+            <span>Vitória Fora (2)</span>
+            <span id="dist-2">—%</span>
+          </div>
+          <div class="dist-track">
+            <div class="dist-fill" id="bar-2" style="width:34%;background:var(--accent);"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- stats -->
+      <div id="analytics-stats">
+        <div class="stat-row"><span>Total apostas</span><span id="s-total">—</span></div>
+        <div class="stat-row"><span>Volume total</span><span id="s-vol">—</span></div>
+        <div class="stat-row"><span>Odd média</span><span id="s-odd">—</span></div>
+        <div class="stat-row"><span>Montante médio</span><span id="s-mont">—</span></div>
+      </div>
+    </div>
+
+    <!-- ALERTAS -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-label">Alertas</span>
+        <span id="alertas-count" style="font-family:var(--mono);font-size:10px;color:var(--muted);">0</span>
+      </div>
+      <div class="overflow-list" id="alertas-lista">
+        <div class="empty">✓ Sem alertas</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GRÁFICOS -->
+  <div class="charts-row">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-label">Apostas / min — histórico</span>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--muted);">últimas 30 amostras</span>
+      </div>
+      <canvas id="chart-apm" height="90"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <span class="card-label">Volume acumulado (€)</span>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--muted);">últimas 30 amostras</span>
+      </div>
+      <canvas id="chart-vol" height="90"></canvas>
+    </div>
+  </div>
+
+
+  <!-- JOGOS FINALIZADOS -->
+  <div class="card" style="margin-top:4px;">
+    <div class="card-header">
+      <span class="card-label">Resultados da sessão</span>
+      <span id="fin-count" style="font-family:var(--mono);font-size:10px;color:var(--muted);">0 jogos</span>
+    </div>
+    <div class="results-grid" id="finalizados-grid">
+      <div class="finalizados-empty">Ainda não há jogos finalizados nesta sessão.</div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+// ── CONFIG ────────────────────────────────────────────────────
+const api = () => document.getElementById('api-url').value.replace(/\/$/, '');
+let janelaMin = 5;
+let erros = 0;
+
+function setJanela(min, btn) {
+  janelaMin = min;
+  document.querySelectorAll('.window-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  tick();
+}
+
+// ── CHARTS ───────────────────────────────────────────────────
+const chartCfg = {
+  responsive: true,
+  animation: { duration: 300 },
+  scales: {
+    x: { ticks: { color: '#7d8590', font: { size: 9, family: "'Space Mono'" } }, grid: { color: '#21262d' } },
+    y: { ticks: { color: '#7d8590', font: { size: 9, family: "'Space Mono'" } }, grid: { color: '#21262d' }, beginAtZero: true }
+  },
+  plugins: { legend: { display: false } }
+};
+
+const histApm = { labels: [], data: [] };
+const histVol = { labels: [], data: [] };
+
+const chartApm = new Chart(document.getElementById('chart-apm'), {
+  type: 'line',
+  data: {
+    labels: histApm.labels,
+    datasets: [{ data: histApm.data, borderColor: '#f85149', backgroundColor: '#f8514912', fill: true, tension: 0.4, pointRadius: 2, pointBackgroundColor: '#f85149', borderWidth: 1.5 }]
+  },
+  options: { ...chartCfg }
+});
+
+const chartVol = new Chart(document.getElementById('chart-vol'), {
+  type: 'bar',
+  data: {
+    labels: histVol.labels,
+    datasets: [{ data: histVol.data, backgroundColor: '#238636aa', borderColor: '#238636', borderWidth: 1, borderRadius: 3 }]
+  },
+  options: { ...chartCfg }
+});
+
+function pushHist(apm, vol) {
+  const t = new Date().toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  [histApm, histVol].forEach(h => { if (h.labels.length >= 30) { h.labels.shift(); h.data.shift(); } });
+  histApm.labels.push(t); histApm.data.push(+(apm || 0).toFixed(2));
+  histVol.labels.push(t); histVol.data.push(+(vol || 0).toFixed(2));
+  chartApm.update('none');
+  chartVol.update('none');
+}
+
+// ── ESTADO ────────────────────────────────────────────────────
+function setStatus(ok) {
+  const dot = document.getElementById('status-dot');
+  const txt = document.getElementById('status-txt');
+  dot.className = 'status-dot ' + (ok ? 'ok' : 'err');
+  txt.textContent = ok ? 'online' : 'offline';
+}
+
+// ── MÉTRICAS ─────────────────────────────────────────────────
+async function fetchMetricas() {
+  const r = await fetch(`${api()}/api/dashboard/metricas?minutos=${janelaMin}`);
+  if (!r.ok) throw new Error('metricas');
+  const d = await r.json();
+  document.getElementById('m-apm').textContent   = (d.apostasPorMinuto ?? 0).toFixed(1);
+  document.getElementById('m-vol').textContent   = fmt(d.volumeJanela ?? 0) + '€';
+  document.getElementById('m-exp').textContent   = fmt(d.exposicaoTotal ?? 0) + '€';
+  document.getElementById('m-live').textContent  = d.jogosAtivos ?? 0;
+  document.getElementById('m-agendados').textContent = (d.jogosAgendados ?? 0) + ' agendados';
+  document.getElementById('m-users').textContent = d.utilizadoresAtivos ?? 0;
+  pushHist(d.apostasPorMinuto, d.volumeJanela);
+}
+
+// ── JOGOS ─────────────────────────────────────────────────────
+async function fetchJogos() {
+  const r = await fetch(`${api()}/api/dashboard/jogos`);
+  if (!r.ok) throw new Error('jogos');
+  const jogos = await r.json();
+  const el = document.getElementById('jogos-lista');
+  document.getElementById('jogos-count').textContent = jogos.length + ' jogos';
+
+  if (!jogos.length) {
+    el.innerHTML = '<div class="empty">Nenhum jogo no store. Inicia o simulador.</div>';
+    return;
+  }
+
+  el.innerHTML = jogos.map(j => {
+    const dotCls = j.estado === 2 ? 'dot-live' : j.estado === 1 ? 'dot-sched' : 'dot-done';
+    const badge  = j.estado === 2
+      ? '<span class="badge badge-live">LIVE</span>'
+      : j.estado === 1
+        ? '<span class="badge badge-sched">AGENDADO</span>'
+        : '<span class="badge badge-done">FIM</span>';
+
+    const score  = (j.estado >= 2 && j.golosCasa != null)
+      ? `<span style="font-family:var(--mono);font-size:15px;font-weight:700;color:var(--text);">${j.golosCasa}–${j.golosFora}</span>`
+      : badge;
+
+    const expHigh = (j.exposicaoMaxima ?? 0) > 10000;
+    const expStr  = fmt(j.exposicaoMaxima ?? 0) + '€';
+
+    return `<div class="jogo-item">
+      <div class="estado-dot ${dotCls}"></div>
+      <div>
+        <div class="jogo-nome">${j.equipaCasa} <span style="color:var(--muted);font-weight:400;">vs</span> ${j.equipaFora}</div>
+        <div class="jogo-meta">${j.codigoJogo} · ${j.numApostas ?? 0} apostas · ${fmt(j.totalApostado ?? 0)}€</div>
+      </div>
+      ${score}
+      <div class="jogo-exp ${expHigh ? 'high' : 'normal'}">${expHigh ? '⚠ ' : ''}${expStr}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── ANALYTICS ─────────────────────────────────────────────────
+async function fetchAnalytics() {
+  const r = await fetch(`${api()}/api/dashboard/analytics?minutos=${janelaMin}`);
+  if (!r.ok) throw new Error('analytics');
+  const d = await r.json();
+
+  const p1 = (d.pcTipo1 ?? 33).toFixed(1);
+  const pX = (d.pcTipoX ?? 33).toFixed(1);
+  const p2 = (d.pcTipo2 ?? 34).toFixed(1);
+
+  document.getElementById('dist-1').textContent = p1 + '%';
+  document.getElementById('dist-X').textContent = pX + '%';
+  document.getElementById('dist-2').textContent = p2 + '%';
+  document.getElementById('bar-1').style.width  = p1 + '%';
+  document.getElementById('bar-X').style.width  = pX + '%';
+  document.getElementById('bar-2').style.width  = p2 + '%';
+
+  document.getElementById('s-total').textContent = d.totalApostas ?? 0;
+  document.getElementById('s-vol').textContent   = fmt(d.volumeTotal ?? 0) + '€';
+  document.getElementById('s-odd').textContent   = (d.oddMedia ?? 0).toFixed(2);
+  document.getElementById('s-mont').textContent  = fmt(d.montanteMedio ?? 0) + '€';
+}
+
+// ── ALERTAS ───────────────────────────────────────────────────
+async function fetchAlertas() {
+  const r = await fetch(`${api()}/api/dashboard/alertas?max=15`);
+  if (!r.ok) throw new Error('alertas');
+  const alertas = await r.json();
+  const el = document.getElementById('alertas-lista');
+  document.getElementById('alertas-count').textContent = alertas.length;
+
+  if (!alertas.length) {
+    el.innerHTML = '<div class="empty">✓ Sem alertas ativos</div>';
+    return;
+  }
+
+  el.innerHTML = alertas.map(a => {
+    const isPico = a.tipo === 'PicoApostas';
+    const hora   = new Date(a.timestamp).toLocaleTimeString('pt-PT');
+    return `<div class="alert-item ${isPico ? 'warn' : ''}">
+      <div class="alert-tipo">${isPico ? '⚡ PICO APOSTAS' : '🔴 EXPOSIÇÃO ALTA'}</div>
+      <div class="alert-msg">${a.mensagem}</div>
+      <div class="alert-time">${hora}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── TICK PRINCIPAL ────────────────────────────────────────────
+async function fetchFinalizados() {
+  const r = await fetch(`${api()}/api/dashboard/finalizados`);
+  if (!r.ok) throw new Error('finalizados');
+  const jogos = await r.json();
+  const el = document.getElementById('finalizados-grid');
+  document.getElementById('fin-count').textContent = jogos.length + ' jogo' + (jogos.length !== 1 ? 's' : '');
+
+  if (!jogos.length) {
+    el.innerHTML = '<div class="finalizados-empty">Ainda não há jogos finalizados nesta sessão.</div>';
+    return;
+  }
+
+  el.innerHTML = jogos.map(j => {
+    const res = j.resultado || (j.golosCasa > j.golosFora ? '1' : j.golosFora > j.golosCasa ? '2' : 'X');
+    const outCls = res === '1' ? 'out-1' : res === '2' ? 'out-2' : 'out-X';
+    const outLabel = res === '1' ? `Vitória ${j.equipaCasa}`
+                   : res === '2' ? `Vitória ${j.equipaFora}`
+                   : 'Empate';
+
+    const gC = j.golosCasa ?? '?', gF = j.golosFora ?? '?';
+    const margem = typeof j.margemPlataforma === 'number' ? j.margemPlataforma.toFixed(1) : '—';
+    const margemCls = j.margemPlataforma > 0 ? 'green' : j.margemPlataforma < 0 ? 'accent' : '';
+    const hora = j.dataFim ? new Date(j.dataFim).toLocaleTimeString('pt-PT', {hour:'2-digit',minute:'2-digit'}) : '—';
+
+    return `<div class="result-card">
+      <div class="result-header">
+        <div>
+          <div class="result-equipas">${j.equipaCasa} <span style="color:var(--muted);font-weight:400">vs</span> ${j.equipaFora}</div>
+          <div class="result-comp">${j.codigoJogo}${j.competicao ? ' · ' + j.competicao : ''}</div>
+        </div>
+        <div style="text-align:right">
+          <div class="result-score">${gC}–${gF}</div>
+          <div class="${outCls} result-outcome">${outLabel}</div>
+        </div>
+      </div>
+      <div class="result-apostas">
+        <div class="ap-pill ap-ganhas">✓ ${j.apostasGanhas ?? 0} ganhas</div>
+        <div class="ap-pill ap-perdidas">✗ ${j.apostasPerdidas ?? 0} perdidas</div>
+        ${(j.apostasAnuladas ?? 0) > 0 ? `<div class="ap-pill ap-anuladas">↩ ${j.apostasAnuladas} anuladas</div>` : ''}
+      </div>
+      <div class="result-stats">
+        <div class="rs"><span class="rs-label">Volume apostado</span><span class="rs-val">${fmt(j.totalApostado ?? 0)}€</span></div>
+        <div class="rs"><span class="rs-label">Prémios pagos</span><span class="rs-val accent">${fmt(j.premiosPagos ?? 0)}€</span></div>
+        <div class="rs"><span class="rs-label">Margem plataforma</span><span class="rs-val ${margemCls}">${margem}%</span></div>
+        <div class="rs"><span class="rs-label">Finalizado às</span><span class="rs-val">${hora}</span></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function tick() {
+  try {
+    await Promise.all([fetchMetricas(), fetchJogos(), fetchAnalytics(), fetchAlertas(), fetchFinalizados()]);
+    erros = 0;
+    setStatus(true);
+    document.getElementById('last-update').textContent =
+      'sync ' + new Date().toLocaleTimeString('pt-PT');
+  } catch {
+    erros++;
+    if (erros >= 2) setStatus(false);
+  }
+}
+
+// ── UTIL ──────────────────────────────────────────────────────
+function fmt(n) {
+  n = +n || 0;
+  if (n >= 1000) return (n / 1000).toFixed(1) + 'k';
+  return n.toFixed(2);
+}
+
+tick();
+setInterval(tick, 3000);
+</script>
+</body>
+</html>

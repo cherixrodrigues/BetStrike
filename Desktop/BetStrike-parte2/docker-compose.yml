@@ -1,0 +1,173 @@
+version: '3.8'
+
+services:
+
+  # ── BASE DE DADOS ─────────────────────────────────────────────────────────────
+  db:
+    image: mcr.microsoft.com/mssql/server:2019-latest
+    container_name: betstrike-db
+    user: "0:0"
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=SuaSenhaForte123!
+    ports:
+      - "1433:1433"
+    volumes:
+      - mssql-data:/var/opt/mssql/data
+    networks:
+      - betstrike-network
+    healthcheck:
+      test: ["CMD", "/opt/mssql-tools18/bin/sqlcmd", "-S", "localhost", "-U", "sa", "-P", "SuaSenhaForte123!", "-Q", "SELECT 1", "-No", "-b"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+  # ── RABBITMQ (filas assíncronas) ──────────────────────────────────────────────
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: betstrike-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - betstrike-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # ── ZOOKEEPER ─────────────────────────────────────────────────────────────────
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    container_name: betstrike-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - betstrike-network
+    volumes:
+      - zookeeper-data:/var/lib/zookeeper/data
+      - zookeeper-log:/var/lib/zookeeper/log
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "2181"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # ── KAFKA ─────────────────────────────────────────────────────────────────────
+  kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    container_name: betstrike-kafka
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    # Porta 9092 removida para evitar conflitos com outros processos.
+    # A API comunica via kafka:29092 internamente.
+    # Para acesso externo, descomentar:
+    # ports:
+    #   - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_LOG_RETENTION_HOURS: 168
+      KAFKA_LOG_RETENTION_BYTES: -1
+    networks:
+      - betstrike-network
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "kafka:29092"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # ── BETSTRIKE API ─────────────────────────────────────────────────────────────
+  betstrikeapi:
+    build:
+      context: .
+      dockerfile: BetStrikeAPI_1/Dockerfile
+    container_name: betstrike-api
+    ports:
+      - "53386:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__ApostasConnection=Server=db;Database=Apostas;User Id=sa;Password=SuaSenhaForte123!;TrustServerCertificate=True;
+      - ConnectionStrings__PagamentosConnection=Server=db;Database=Pagamentos;User Id=sa;Password=SuaSenhaForte123!;TrustServerCertificate=True;
+      - RabbitMQ__Host=rabbitmq
+      - Kafka__BootstrapServers=kafka:29092
+    networks:
+      - betstrike-network
+
+  # ── PLATAFORMA RESULTADOS ─────────────────────────────────────────────────────
+  plataformaresultados:
+    build:
+      context: .
+      dockerfile: PlataformaResultados/Dockerfile
+    container_name: betstrike-resultados
+    ports:
+      - "5100:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+      betstrikeapi:
+        condition: service_started
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__ResultadosConnection=Server=db;Database=Resultados;User Id=sa;Password=SuaSenhaForte123!;TrustServerCertificate=True;
+      - BetStrikeAPI__BaseUrl=http://betstrikeapi:8080
+      - Kafka__BootstrapServers=kafka:29092
+    networks:
+      - betstrike-network
+
+  # ── FRONTEND ──────────────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./BetStrikeWeb
+      dockerfile: Dockerfile
+    container_name: betstrike-frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      betstrikeapi:
+        condition: service_started
+    networks:
+      - betstrike-network
+
+  # ── DASHBOARD ─────────────────────────────────────────────────────────────────
+  dashboard:
+    image: nginx:alpine
+    container_name: betstrike-dashboard
+    ports:
+      - "8081:80"
+    volumes:
+      - ./Dashboard/dashboard.html:/usr/share/nginx/html/index.html:ro
+    networks:
+      - betstrike-network
+
+networks:
+  betstrike-network:
+    driver: bridge
+
+volumes:
+  mssql-data:
+  kafka-data:
+  zookeeper-data:
+  zookeeper-log:

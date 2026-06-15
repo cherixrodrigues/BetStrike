@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/BetStrikeWeb/">
+    <File Path="Dockerfile" />
+    <File Path="index.html" />
+  </Folder>
+  <Project Path="BetStrikeAPI_1/BetStrikeAPI.csproj" />
+  <Project Path="BetStrikeCherix/BetStrike/BetStrike.csproj" />
+  <Project Path="docker-compose.dcproj">
+    <Build />
+  </Project>
+  <Project Path="PlataformaResultados/PlataformaResultados.csproj" />
+</Solution>

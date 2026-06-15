@@ -1,0 +1,6 @@
+@PlataformaResultados_HostAddress = http://localhost:5152
+
+GET {{PlataformaResultados_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

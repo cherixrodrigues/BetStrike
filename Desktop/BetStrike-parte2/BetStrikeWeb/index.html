@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>BetStrike | Live Arena</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,400;0,700;0,900;1,900&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+/* ── TOKENS ───────────────────────────────────────────────── */
+:root {
+  --red:     #E10014;
+  --red-d:   #b8000f;
+  --red-g:   rgba(225,0,20,0.08);
+  --bg:      #f7f7f5;
+  --white:   #ffffff;
+  --border:  #e8e8e4;
+  --text:    #111110;
+  --muted:   #878680;
+  --muted2:  #b5b3ae;
+  --green:   #16a34a;
+  --orange:  #d97706;
+  --blue:    #2563eb;
+  --shadow:  0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+  --shadow2: 0 4px 16px rgba(0,0,0,.08);
+  --r:       10px;
+  --font:    'DM Sans', sans-serif;
+  --display: 'Barlow Condensed', sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; -webkit-font-smoothing: antialiased; }
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* ── HEADER ───────────────────────────────────────────────── */
+header {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+  background: rgba(255,255,255,.92);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+  height: 56px;
+  display: flex; align-items: center;
+  padding: 0 24px;
+}
+.h-inner {
+  width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 16px;
+}
+.logo {
+  font-family: var(--display);
+  font-weight: 900; font-style: italic;
+  font-size: 22px; letter-spacing: -0.01em;
+  color: var(--red); user-select: none;
+}
+.h-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+.h-user { display: none; align-items: center; gap: 12px; }
+.h-user.visible { display: flex; }
+
+.user-chip {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 12px 4px 6px;
+}
+.user-avatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--red); color: white;
+  font-size: 11px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+.user-nome { font-size: 13px; font-weight: 600; }
+.user-saldo { font-size: 13px; font-weight: 700; color: var(--green); }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  font-family: var(--font); font-size: 13px; font-weight: 700;
+  padding: 8px 16px; border-radius: 8px;
+  border: none; cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+.btn-primary { background: var(--red); color: white; }
+.btn-primary:hover { background: var(--red-d); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(225,0,20,.3); }
+.btn-ghost   { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+.btn-ghost:hover { background: var(--bg); color: var(--text); border-color: var(--muted2); }
+.btn-sm { padding: 5px 10px; font-size: 11px; border-radius: 6px; }
+.btn-outline-red { background: transparent; color: var(--red); border: 1.5px solid var(--red); }
+.btn-outline-red:hover { background: var(--red); color: white; }
+
+/* ── LAYOUT ───────────────────────────────────────────────── */
+main {
+  display: flex;
+  min-height: 100vh;
+  padding-top: 56px;
+}
+.content {
+  flex: 1;
+  padding: 24px 24px 48px;
+  min-width: 0;
+  margin-right: 380px;
+}
+aside {
+  position: fixed; right: 0; top: 56px;
+  width: 380px; height: calc(100vh - 56px);
+  background: var(--white);
+  border-left: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── PAGE TITLE ───────────────────────────────────────────── */
+.page-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 20px;
+}
+.page-title {
+  font-family: var(--display);
+  font-weight: 900; font-style: italic;
+  font-size: 32px; letter-spacing: -0.01em;
+  text-transform: uppercase;
+}
+
+.live-indicator {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 6px 14px;
+  box-shadow: var(--shadow);
+}
+.live-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--red);
+  position: relative;
+}
+.live-dot::after {
+  content: '';
+  position: absolute; inset: -4px; border-radius: 50%;
+  background: rgba(225,0,20,.2);
+  animation: ripple 1.5s infinite;
+}
+@keyframes ripple { 0%{transform:scale(1);opacity:1} 100%{transform:scale(2.5);opacity:0} }
+.live-txt { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; }
+
+/* ── FILTROS ──────────────────────────────────────────────── */
+.filtros {
+  display: flex; gap: 6px; margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.filtro {
+  font-family: var(--font); font-size: 12px; font-weight: 700;
+  padding: 6px 14px; border-radius: 999px;
+  border: 1.5px solid var(--border);
+  background: var(--white);
+  color: var(--muted); cursor: pointer;
+  transition: all 0.15s;
+}
+.filtro:hover { border-color: var(--muted2); color: var(--text); }
+.filtro.active-all  { background: var(--text); border-color: var(--text); color: white; }
+.filtro.active-live { background: var(--red);  border-color: var(--red);  color: white; }
+.filtro.active-sched{ background: var(--blue); border-color: var(--blue); color: white; }
+
+/* ── JOGOS ────────────────────────────────────────────────── */
+.jogos-grid { display: flex; flex-direction: column; gap: 10px; }
+
+.jogo-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 16px 18px;
+  box-shadow: var(--shadow);
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+.jogo-card:hover { box-shadow: var(--shadow2); transform: translateY(-1px); }
+.jogo-card.is-live { border-left: 3px solid var(--red); }
+
+.jogo-top {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 12px;
+}
+.jogo-badge {
+  font-size: 9px; font-weight: 700; letter-spacing: .08em;
+  padding: 2px 8px; border-radius: 4px; text-transform: uppercase;
+}
+.badge-live  { background: var(--red-g); color: var(--red); border: 1px solid rgba(225,0,20,.2); }
+.badge-sched { background: rgba(37,99,235,.06); color: var(--blue); border: 1px solid rgba(37,99,235,.18); }
+.jogo-comp   { font-size: 11px; color: var(--muted); }
+.jogo-code   { font-size: 10px; color: var(--muted2); margin-left: auto; font-weight: 500; }
+
+.jogo-body {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.equipa { font-size: 14px; font-weight: 700; line-height: 1.2; }
+.equipa-casa { text-align: right; }
+.marcador {
+  text-align: center;
+}
+.marcador-score {
+  font-family: var(--display);
+  font-size: 28px; font-weight: 900; font-style: italic;
+  color: var(--red); line-height: 1;
+}
+.marcador-vs {
+  font-size: 11px; font-weight: 700; color: var(--muted2);
+  letter-spacing: .08em;
+}
+.marcador-live-tag {
+  font-size: 9px; color: var(--red); font-weight: 700;
+  text-transform: uppercase; letter-spacing: .08em;
+}
+
+.odds-row { display: flex; gap: 6px; }
+.odd-btn {
+  flex: 1;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  cursor: pointer;
+  padding: 8px 6px;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  transition: all 0.15s;
+}
+.odd-btn:hover { border-color: var(--red); background: var(--red-g); }
+.odd-btn.selected { border-color: var(--red); background: var(--red); }
+.odd-btn.selected .odd-label,
+.odd-btn.selected .odd-val { color: white; }
+.odd-label { font-size: 9px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; width: 100%; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.odd-val   { font-family: var(--display); font-size: 18px; font-weight: 700; color: var(--text); line-height: 1; }
+.odds-fechadas { font-size: 11px; color: var(--muted); font-style: italic; text-align: center; padding: 8px 0; }
+
+/* ── BET SLIP ─────────────────────────────────────────────── */
+.slip-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.slip-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); }
+.slip-info  { font-size: 13px; font-weight: 700; color: var(--red); margin-top: 2px; }
+
+.slip-body { flex: 1; padding: 16px 20px; overflow-y: auto; }
+
+.slip-empty-state {
+  height: 100%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 10px; color: var(--muted2); text-align: center;
+}
+.slip-empty-state .icon { font-size: 40px; opacity: .5; }
+.slip-empty-state p { font-size: 12px; font-style: italic; }
+
+.slip-selection {
+  background: linear-gradient(135deg, var(--red-g), transparent);
+  border: 1px solid rgba(225,0,20,.15);
+  border-left: 3px solid var(--red);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+}
+.sel-tipo    { font-size: 11px; font-weight: 700; color: var(--red); text-transform: uppercase; letter-spacing: .06em; }
+.sel-equipas { font-size: 13px; font-weight: 700; margin-top: 3px; }
+.sel-comp    { font-size: 10px; color: var(--muted); margin-top: 1px; }
+.sel-odd-row { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
+.sel-odd-label { font-size: 10px; color: var(--muted); }
+.sel-odd-val   { font-family: var(--display); font-size: 22px; font-weight: 900; color: var(--text); }
+
+.stake-section { margin-bottom: 16px; }
+.stake-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin-bottom: 8px; }
+.stake-input-wrap {
+  position: relative;
+}
+.stake-sym {
+  position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+  font-size: 16px; font-weight: 700; color: var(--muted);
+}
+.stake-input {
+  width: 100%; border: 1.5px solid var(--border);
+  border-radius: 10px; padding: 12px 12px 12px 32px;
+  font-family: var(--display); font-size: 24px; font-weight: 700;
+  background: var(--bg); color: var(--text);
+  outline: none; transition: border-color .2s;
+}
+.stake-input:focus { border-color: var(--red); background: white; }
+.quick-stakes { display: flex; gap: 6px; margin-top: 8px; }
+.qs-btn {
+  flex: 1; font-size: 11px; font-weight: 700;
+  padding: 6px; border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--white); color: var(--muted);
+  cursor: pointer; transition: all .15s;
+}
+.qs-btn:hover { border-color: var(--red); color: var(--red); }
+
+.retorno-box {
+  background: var(--text); color: white;
+  border-radius: 10px; padding: 14px 16px;
+  margin-bottom: 14px;
+}
+.retorno-row { display: flex; justify-content: space-between; align-items: center; }
+.retorno-row:not(:last-child) { margin-bottom: 8px; opacity: .5; font-size: 12px; }
+.retorno-row:last-child { border-top: 1px solid rgba(255,255,255,.1); padding-top: 10px; }
+.retorno-label { font-size: 12px; }
+.retorno-val   { font-weight: 700; font-size: 12px; }
+.retorno-big   { font-family: var(--display); font-size: 24px; font-weight: 900; color: var(--red); }
+
+/* ── PAINEL APOSTAS ───────────────────────────────────────── */
+.painel-apostas {
+  display: none;
+  position: absolute; inset: 0;
+  background: white; z-index: 10;
+  flex-direction: column;
+}
+.painel-apostas.open { display: flex; }
+.painel-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.painel-body { flex: 1; padding: 16px 20px; overflow-y: auto; }
+
+.aposta-item {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+}
+.aposta-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.aposta-jogo { font-size: 11px; color: var(--muted); }
+.aposta-estado {
+  font-size: 9px; font-weight: 700; letter-spacing: .06em;
+  padding: 2px 7px; border-radius: 4px;
+}
+.e-pendente { background: rgba(37,99,235,.08); color: var(--blue); }
+.e-ganha    { background: rgba(22,163,74,.08); color: var(--green); }
+.e-perdida  { background: var(--red-g); color: var(--red); }
+.e-anulada  { background: #f5f5f4; color: var(--muted); }
+.aposta-mid { display: flex; justify-content: space-between; align-items: center; }
+.aposta-tipo   { font-size: 13px; font-weight: 700; color: var(--red); }
+.aposta-odd    { font-size: 11px; color: var(--muted); margin-left: 4px; }
+.aposta-values { text-align: right; font-size: 11px; color: var(--muted); }
+.aposta-values strong { font-size: 12px; color: var(--text); display: block; }
+
+/* ── MODAIS ───────────────────────────────────────────────── */
+.modal-overlay {
+  display: none;
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(0,0,0,.5);
+  backdrop-filter: blur(6px);
+  align-items: center; justify-content: center;
+  padding: 16px;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: white;
+  border-radius: 16px;
+  padding: 28px;
+  width: 100%; max-width: 380px;
+  box-shadow: 0 24px 64px rgba(0,0,0,.15);
+  animation: modalIn .25s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes modalIn { from{transform:scale(.9) translateY(10px);opacity:0} to{transform:scale(1) translateY(0);opacity:1} }
+
+.modal-title {
+  font-family: var(--display);
+  font-size: 26px; font-weight: 900; font-style: italic;
+  text-transform: uppercase; margin-bottom: 4px;
+}
+.modal-sub { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+
+.tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+.tab {
+  flex: 1; padding: 10px; font-size: 12px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .08em;
+  cursor: pointer; border: none; background: transparent; color: var(--muted);
+  border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all .15s;
+}
+.tab.active { color: var(--red); border-bottom-color: var(--red); }
+
+.field { margin-bottom: 14px; }
+.field label { display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin-bottom: 6px; }
+.field input {
+  width: 100%; background: var(--bg);
+  border: 1.5px solid var(--border); border-radius: 10px;
+  padding: 12px 14px; font-family: var(--font); font-size: 14px; font-weight: 600;
+  color: var(--text); outline: none; transition: border-color .2s;
+}
+.field input:focus { border-color: var(--red); background: white; }
+
+.quick-amounts { display: flex; gap: 6px; margin-top: 8px; }
+.qa-btn {
+  flex: 1; font-size: 12px; font-weight: 700;
+  padding: 8px; border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--bg); color: var(--muted);
+  cursor: pointer; transition: all .15s;
+}
+.qa-btn:hover { border-color: var(--red); color: var(--red); }
+
+/* ── TOASTS ───────────────────────────────────────────────── */
+#toasts {
+  position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+  display: flex; flex-direction: column; gap: 8px;
+  pointer-events: none;
+}
+.toast {
+  background: var(--text); color: white;
+  padding: 12px 18px; border-radius: 10px;
+  font-size: 13px; font-weight: 600; max-width: 320px;
+  pointer-events: auto;
+  animation: toastIn .3s ease;
+  box-shadow: 0 8px 24px rgba(0,0,0,.15);
+}
+@keyframes toastIn { from{transform:translateY(16px);opacity:0} to{transform:translateY(0);opacity:1} }
+.toast.ok  { border-left: 3px solid var(--green); }
+.toast.err { border-left: 3px solid var(--red); }
+.toast.inf { border-left: 3px solid var(--blue); }
+
+/* ── EMPTY / ERROR ────────────────────────────────────────── */
+.empty-state { text-align: center; padding: 48px 16px; color: var(--muted2); }
+.empty-state .icon { font-size: 48px; margin-bottom: 12px; display: block; }
+.empty-state p { font-size: 14px; font-weight: 500; }
+.empty-state small { font-size: 12px; color: var(--muted2); display: block; margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="h-inner">
+    <div class="logo">BetStrike</div>
+    <div class="h-right">
+      <div class="h-user" id="h-user">
+        <div class="user-chip">
+          <div class="user-avatar" id="h-avatar">?</div>
+          <span class="user-nome" id="h-nome"></span>
+        </div>
+        <span class="user-saldo" id="h-saldo">0.00€</span>
+        <button class="btn btn-ghost btn-sm" onclick="abrirDeposito()">+ Depósito</button>
+        <button class="btn btn-ghost btn-sm" onclick="abrirApostas()">As Minhas Apostas</button>
+      </div>
+      <button class="btn btn-outline-red" id="btn-entrar" onclick="abrirAuth()">Entrar / Registar</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="content">
+
+    <div class="page-header">
+      <h1 class="page-title">Live Arena</h1>
+      <div class="live-indicator">
+        <div class="live-dot"></div>
+        <span class="live-txt" id="count-txt">A carregar...</span>
+      </div>
+    </div>
+
+    <div class="filtros">
+      <button class="filtro active-all" id="f-todos"   onclick="setFiltro(null,this)">Todos</button>
+      <button class="filtro"            id="f-live"    onclick="setFiltro(2,this)">🔴 Em Curso</button>
+      <button class="filtro"            id="f-sched"   onclick="setFiltro(1,this)">Agendados</button>
+    </div>
+
+    <div class="jogos-grid" id="jogos"></div>
+    <div id="api-status"></div>
+  </div>
+
+  <!-- ASIDE BET SLIP -->
+  <aside>
+    <div class="slip-header">
+      <div class="slip-title">Boletim de Apostas</div>
+      <div class="slip-info" id="slip-info">Nenhuma seleção</div>
+    </div>
+
+    <div class="slip-body" id="slip-body">
+      <div class="slip-empty-state" id="slip-empty">
+        <span class="icon">🎯</span>
+        <p>Selecione uma odd<br>para começar</p>
+      </div>
+
+      <div id="slip-form" style="display:none;">
+        <div class="slip-selection">
+          <div class="sel-tipo" id="sel-tipo"></div>
+          <div class="sel-equipas" id="sel-equipas"></div>
+          <div class="sel-comp" id="sel-comp"></div>
+          <div class="sel-odd-row">
+            <span class="sel-odd-label">Odd</span>
+            <span class="sel-odd-val" id="sel-odd">1.00</span>
+          </div>
+        </div>
+
+        <div class="stake-section">
+          <div class="stake-label">Montante</div>
+          <div class="stake-input-wrap">
+            <span class="stake-sym">€</span>
+            <input class="stake-input" id="stake" type="number" value="10" min="0.01" step="0.01" oninput="calcGanhos()"/>
+          </div>
+          <div class="quick-stakes">
+            <button class="qs-btn" onclick="setStake(5)">5€</button>
+            <button class="qs-btn" onclick="setStake(10)">10€</button>
+            <button class="qs-btn" onclick="setStake(25)">25€</button>
+            <button class="qs-btn" onclick="setStake(50)">50€</button>
+          </div>
+        </div>
+
+        <div class="retorno-box">
+          <div class="retorno-row">
+            <span class="retorno-label">Montante</span>
+            <span class="retorno-val" id="r-stake">10.00€</span>
+          </div>
+          <div class="retorno-row">
+            <span class="retorno-label">Odd</span>
+            <span class="retorno-val" id="r-odd">1.00</span>
+          </div>
+          <div class="retorno-row">
+            <span class="retorno-label">Retorno potencial</span>
+            <span class="retorno-big" id="r-total">0.00€</span>
+          </div>
+        </div>
+
+        <button class="btn btn-primary" style="width:100%;font-size:15px;padding:14px;font-family:var(--display);font-size:18px;font-style:italic;letter-spacing:.02em;text-transform:uppercase;" onclick="submeterAposta()">
+          Colocar Aposta
+        </button>
+        <button class="btn btn-ghost" style="width:100%;margin-top:8px;font-size:11px;" onclick="limparSlip()">
+          Cancelar
+        </button>
+      </div>
+    </div>
+
+    <!-- PAINEL APOSTAS -->
+    <div class="painel-apostas" id="painel">
+      <div class="painel-header">
+        <span style="font-size:15px;font-weight:700;">As Minhas Apostas</span>
+        <button class="btn btn-ghost btn-sm" onclick="fecharApostas()">✕ Fechar</button>
+      </div>
+      <div class="painel-body" id="painel-body">
+        <p style="color:var(--muted);font-style:italic;text-align:center;padding:24px 0;">A carregar...</p>
+      </div>
+    </div>
+  </aside>
+</main>
+
+<!-- MODAL AUTH -->
+<div class="modal-overlay" id="modal-auth">
+  <div class="modal">
+    <div class="modal-title">BetStrike</div>
+    <p class="modal-sub">Entra ou cria a tua conta gratuita.</p>
+    <div class="tabs">
+      <button class="tab active" id="tab-login"   onclick="setTab('login')">Entrar</button>
+      <button class="tab"        id="tab-reg"     onclick="setTab('reg')">Criar Conta</button>
+    </div>
+
+    <div id="form-login">
+      <div class="field">
+        <label>Nome</label>
+        <input id="login-nome" type="text" placeholder="O teu nome..." onkeydown="if(event.key==='Enter')doLogin()"/>
+      </div>
+      <div class="field">
+        <label>Email</label>
+        <input id="login-email" type="email" placeholder="email@exemplo.com" onkeydown="if(event.key==='Enter')doLogin()"/>
+      </div>
+      <button class="btn btn-primary" style="width:100%;padding:13px;font-size:15px;" onclick="doLogin()">Entrar</button>
+    </div>
+
+    <div id="form-reg" style="display:none;">
+      <p style="font-size:12px;color:var(--muted);margin-bottom:16px;">Bónus imediato de <strong style="color:var(--green);">50.00€</strong> após o registo.</p>
+      <div class="field">
+        <label>Nome</label>
+        <input id="reg-nome" type="text" placeholder="Escolhe o teu nome..." onkeydown="if(event.key==='Enter')doReg()"/>
+      </div>
+      <div class="field">
+        <label>Email</label>
+        <input id="reg-email" type="email" placeholder="email@exemplo.com" onkeydown="if(event.key==='Enter')doReg()"/>
+      </div>
+      <button class="btn btn-primary" style="width:100%;padding:13px;font-size:15px;" onclick="doReg()">Ativar Conta + Bónus</button>
+    </div>
+
+    <button class="btn btn-ghost" style="width:100%;margin-top:10px;" onclick="fecharAuth()">Fechar</button>
+  </div>
+</div>
+
+<!-- MODAL DEPÓSITO -->
+<div class="modal-overlay" id="modal-dep">
+  <div class="modal">
+    <div class="modal-title">Depósito</div>
+    <p class="modal-sub">Adiciona fundos à tua conta.</p>
+    <div class="field">
+      <label>Valor (€)</label>
+      <input id="dep-val" type="number" value="20" min="1" step="1" onkeydown="if(event.key==='Enter')doDeposito()"/>
+    </div>
+    <div class="quick-amounts">
+      <button class="qa-btn" onclick="setDep(10)">10€</button>
+      <button class="qa-btn" onclick="setDep(20)">20€</button>
+      <button class="qa-btn" onclick="setDep(50)">50€</button>
+      <button class="qa-btn" onclick="setDep(100)">100€</button>
+    </div>
+    <button class="btn btn-primary" style="width:100%;margin-top:16px;padding:13px;font-size:15px;" onclick="doDeposito()">Confirmar Depósito</button>
+    <button class="btn btn-ghost"   style="width:100%;margin-top:8px;" onclick="fecharDeposito()">Cancelar</button>
+  </div>
+</div>
+
+<div id="toasts"></div>
+
+<script>
+// ── CONFIG ─────────────────────────────────────────────────
+const _p = new URLSearchParams(window.location.search).get('api');
+const API = (_p || 'http://localhost:53386') + '/api';
+console.log('[BetStrike] API:', API);
+
+// ── STATE ──────────────────────────────────────────────────
+let uid = null, unome = null;
+let selecao = null;
+let filtro  = null;
+
+// ── HASH PARA ODDS ─────────────────────────────────────────
+function hashStr(s) {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = (h * 16777619) >>> 0; }
+  return h;
+}
+function calcOdds(cod, casa, fora) {
+  const seed = hashStr(cod + casa + fora);
+  const r1 = ((seed * 1664525 + 1013904223) >>> 0) / 4294967296;
+  const r2 = (((seed ^ 0xDEADBEEF) * 1664525 + 1013904223) >>> 0) / 4294967296;
+  const fC = .3 + r1 * .4, fF = .3 + r2 * .4, fX = 1 - Math.abs(fC - fF);
+  const m = 1.08, tot = fC + fX + fF;
+  const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+  return {
+    '1': clamp(Math.round((1/(fC/tot/m)) * 20)/20, 1.20, 8.00),
+    'X': clamp(Math.round((1/(fX/tot/m)) * 20)/20, 2.80, 5.50),
+    '2': clamp(Math.round((1/(fF/tot/m)) * 20)/20, 1.20, 8.00)
+  };
+}
+
+// ── TOAST ──────────────────────────────────────────────────
+function toast(msg, tipo = 'inf', ms = 3500) {
+  const c = document.getElementById('toasts');
+  const el = document.createElement('div');
+  el.className = 'toast ' + tipo;
+  el.textContent = msg;
+  c.appendChild(el);
+  setTimeout(() => el.remove(), ms);
+}
+
+// ── AUTH ───────────────────────────────────────────────────
+function abrirAuth() {
+  setTab('login');
+  document.getElementById('modal-auth').classList.add('open');
+  setTimeout(() => document.getElementById('login-nome').focus(), 80);
+}
+function fecharAuth() {
+  document.getElementById('modal-auth').classList.remove('open');
+}
+function setTab(t) {
+  const isL = t === 'login';
+  document.getElementById('form-login').style.display = isL ? '' : 'none';
+  document.getElementById('form-reg').style.display   = isL ? 'none' : '';
+  document.getElementById('tab-login').className = 'tab' + (isL ? ' active' : '');
+  document.getElementById('tab-reg').className   = 'tab' + (!isL ? ' active' : '');
+}
+
+function autenticar(id, nome) {
+  uid = id; unome = nome;
+  const av = nome.slice(0,2).toUpperCase();
+  document.getElementById('h-avatar').textContent = av;
+  document.getElementById('h-nome').textContent   = nome;
+  document.getElementById('h-user').classList.add('visible');
+  document.getElementById('btn-entrar').style.display = 'none';
+  carregarSaldo();
+}
+
+async function doLogin() {
+  const nome  = document.getElementById('login-nome').value.trim();
+  const email = document.getElementById('login-email').value.trim();
+  if (!nome || !email) { toast('Preenche todos os campos.', 'err'); return; }
+  try {
+    const r = await fetch(`${API}/utilizadores/login`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nome, email })
+    });
+    if (r.ok) {
+      const u = await r.json();
+      autenticar(u.id, u.nome);
+      fecharAuth();
+      toast('Bem-vindo de volta, ' + u.nome + '!', 'ok', 4000);
+    } else { toast('Nome ou email incorretos.', 'err', 5000); }
+  } catch { toast('Sem ligação à API.', 'err'); }
+}
+
+async function doReg() {
+  const nome  = document.getElementById('reg-nome').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  if (!nome || !email) { toast('Preenche todos os campos.', 'err'); return; }
+  try {
+    const r = await fetch(`${API}/utilizadores/registar`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nome, email })
+    });
+    if (r.ok) {
+      const u = await r.json();
+      autenticar(u.id, u.nome);
+      fecharAuth();
+      toast('Bem-vindo ' + u.nome + '! 50€ de bónus na conta. 🎉', 'ok', 5000);
+    } else if (r.status === 409) {
+      toast('Já existe conta com este nome ou email.', 'err', 5000);
+    } else {
+      const m = await r.text();
+      toast('Erro: ' + m, 'err', 5000);
+    }
+  } catch { toast('Sem ligação à API.', 'err'); }
+}
+
+// ── SALDO ──────────────────────────────────────────────────
+async function carregarSaldo() {
+  if (!uid) return;
+  try {
+    const r = await fetch(`${API}/utilizadores/${uid}/saldo`);
+    if (r.ok) {
+      const d = await r.json();
+      document.getElementById('h-saldo').textContent = parseFloat(d.saldo).toFixed(2) + '€';
+    }
+  } catch {}
+}
+
+// ── DEPÓSITO ───────────────────────────────────────────────
+function abrirDeposito() {
+  if (!uid) { toast('Entra na tua conta primeiro.', 'err'); abrirAuth(); return; }
+  document.getElementById('modal-dep').classList.add('open');
+  setTimeout(() => document.getElementById('dep-val').focus(), 80);
+}
+function fecharDeposito() { document.getElementById('modal-dep').classList.remove('open'); }
+function setDep(v) { document.getElementById('dep-val').value = v; }
+
+async function doDeposito() {
+  const val = parseFloat(document.getElementById('dep-val').value);
+  if (!val || val <= 0) { toast('Valor inválido.', 'err'); return; }
+  try {
+    const r = await fetch(`${API}/utilizadores/${uid}/depositar`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ valor: val })
+    });
+    if (r.ok) {
+      fecharDeposito();
+      carregarSaldo();
+      toast('Depósito de ' + val.toFixed(2) + '€ realizado!', 'ok');
+    } else { toast('Erro no depósito.', 'err'); }
+  } catch { toast('Sem ligação à API.', 'err'); }
+}
+
+// ── JOGOS ──────────────────────────────────────────────────
+function setFiltro(f, btn) {
+  filtro = f;
+  document.querySelectorAll('.filtro').forEach(b => b.className = 'filtro');
+  if (f === null) btn.classList.add('active-all');
+  else if (f === 2) btn.classList.add('active-live');
+  else btn.classList.add('active-sched');
+  carregarJogos();
+}
+
+async function carregarJogos() {
+  try {
+    let jogos = [];
+    if (filtro === null) {
+      const [r1, r2] = await Promise.all([
+        fetch(`${API}/jogos/listar?estado=2`).catch(() => null),
+        fetch(`${API}/jogos/listar?estado=1`).catch(() => null)
+      ]);
+      const j1 = r1?.ok ? await r1.json() : [];
+      const j2 = r2?.ok ? await r2.json() : [];
+      jogos = [...j1, ...j2];
+    } else {
+      const r = await fetch(`${API}/jogos/listar?estado=${filtro}`);
+      jogos = r.ok ? await r.json() : [];
+    }
+
+    // CORREÇÃO: golosCasa/golosFora já vêm directamente no /jogos/listar
+    // O segundo pedido individual por jogo foi removido — causava race condition
+    // onde o HTML era reconstruído antes dos golos chegarem (marcador piscava em 0-0)
+
+    const nLive = jogos.filter(j => Number(j.estado) === 2).length;
+    document.getElementById('count-txt').textContent =
+      nLive > 0 ? `${nLive} em curso · ${jogos.length} eventos` : `${jogos.length} eventos`;
+
+    const el = document.getElementById('jogos');
+    if (!jogos.length) {
+      el.innerHTML = `<div class="empty-state"><span class="icon">⚽</span><p>Nenhum jogo disponível</p><small>Inicia o simulador para ver jogos aqui.</small></div>`;
+      return;
+    }
+
+    el.innerHTML = jogos.map(j => renderJogo(j)).join('');
+  } catch (e) {
+    document.getElementById('jogos').innerHTML = `
+      <div class="empty-state">
+        <span class="icon">⚠️</span>
+        <p>Sem ligação à API</p>
+        <small>${API.replace('/api', '')}</small>
+      </div>`;
+  }
+}
+
+function renderJogo(j) {
+  const isLive = Number(j.estado) === 2;
+  const odds   = calcOdds(j.codigo, j.equipaCasa, j.equipaFora);
+
+  const badge = isLive
+    ? '<span class="jogo-badge badge-live">&#9679; LIVE</span>'
+    : '<span class="jogo-badge badge-sched">Agendado</span>';
+  const comp = j.tipoCompeticao ? `<span class="jogo-comp">${j.tipoCompeticao}</span>` : '';
+
+  const gC = j.golosCasa ?? 0, gF = j.golosFora ?? 0;
+  const marcador = isLive
+    ? `<div class="marcador">
+        <div class="marcador-score">${gC}–${gF}</div>
+        <div class="marcador-live-tag">● Ao vivo</div>
+       </div>`
+    : `<div class="marcador"><div class="marcador-vs">VS</div></div>`;
+
+  const botoes = isLive
+    ? '<div class="odds-fechadas">Apostas fechadas</div>'
+    : `<div class="odds-row">
+        ${renderOdd(j, '1', `1\n${j.equipaCasa}`, odds['1'])}
+        ${renderOdd(j, 'X', 'X\nEmpate', odds['X'])}
+        ${renderOdd(j, '2', `2\n${j.equipaFora}`, odds['2'])}
+      </div>`;
+
+  return `<div class="jogo-card${isLive ? ' is-live' : ''}">
+    <div class="jogo-top">
+      ${badge}${comp}
+      <span class="jogo-code">${j.codigo}</span>
+    </div>
+    <div class="jogo-body">
+      <div class="equipa equipa-casa">${j.equipaCasa}</div>
+      ${marcador}
+      <div class="equipa">${j.equipaFora}</div>
+    </div>
+    ${botoes}
+  </div>`;
+}
+
+function renderOdd(j, tipo, label, odd) {
+  const partes = label.split('\n');
+  const isActive = selecao?.codigo === j.codigo && selecao?.tipo === tipo;
+  const cE = j.equipaCasa.replace(/'/g,"\\'"), fE = j.equipaFora.replace(/'/g,"\\'"),
+        kE = (j.tipoCompeticao||'').replace(/'/g,"\\'");
+  return `<button class="odd-btn${isActive?' selected':''}"
+    onclick="selecionarOdd('${j.codigo}','${cE}','${fE}','${kE}','${tipo}',${odd})">
+    <span class="odd-label" title="${partes[1]||''}">${partes[0]} · ${partes[1]||''}</span>
+    <span class="odd-val">${odd.toFixed(2)}</span>
+  </button>`;
+}
+
+// ── BET SLIP ───────────────────────────────────────────────
+function selecionarOdd(cod, casa, fora, comp, tipo, odd) {
+  selecao = { codigo: cod, casa, fora, comp, tipo, odd };
+  const titulo = tipo === '1' ? `Vitória ${casa}` : tipo === 'X' ? 'Empate' : `Vitória ${fora}`;
+  document.getElementById('sel-tipo').textContent   = titulo;
+  document.getElementById('sel-equipas').textContent = `${casa} vs ${fora}`;
+  document.getElementById('sel-comp').textContent    = comp || '';
+  document.getElementById('sel-odd').textContent     = odd.toFixed(2);
+  document.getElementById('slip-info').textContent   = '1 Seleção Ativa';
+  document.getElementById('slip-empty').style.display = 'none';
+  document.getElementById('slip-form').style.display  = '';
+  calcGanhos();
+  // Re-render jogos para marcar o botão como selected
+  carregarJogos();
+}
+
+function limparSlip() {
+  selecao = null;
+  document.getElementById('slip-info').textContent   = 'Nenhuma seleção';
+  document.getElementById('slip-empty').style.display = '';
+  document.getElementById('slip-form').style.display  = 'none';
+  carregarJogos();
+}
+
+function setStake(v) { document.getElementById('stake').value = v; calcGanhos(); }
+
+function calcGanhos() {
+  const s = parseFloat(document.getElementById('stake').value) || 0;
+  const o = selecao?.odd || 1;
+  document.getElementById('r-stake').textContent = s.toFixed(2) + '€';
+  document.getElementById('r-odd').textContent   = o.toFixed(2);
+  document.getElementById('r-total').textContent = (s * o).toFixed(2) + '€';
+}
+
+async function submeterAposta() {
+  if (!uid) { toast('Tens de entrar primeiro!', 'err'); abrirAuth(); return; }
+  const stake = parseFloat(document.getElementById('stake').value);
+  if (!selecao || stake <= 0) { toast('Montante inválido.', 'err'); return; }
+  try {
+    const r = await fetch(`${API}/apostas/registar`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idJogo: selecao.codigo, idUtilizador: uid, tipo: selecao.tipo, montante: stake, odd: selecao.odd })
+    });
+    if (r.ok) {
+      toast('Aposta registada! Boa sorte. 🍀', 'ok', 4000);
+      limparSlip();
+      carregarSaldo();
+    } else {
+      const m = await r.text();
+      toast('Erro: ' + m, 'err', 5000);
+    }
+  } catch { toast('Erro de servidor.', 'err'); }
+}
+
+// ── PAINEL APOSTAS ─────────────────────────────────────────
+function abrirApostas() {
+  document.getElementById('painel').classList.add('open');
+  carregarApostas();
+}
+function fecharApostas() { document.getElementById('painel').classList.remove('open'); }
+
+async function carregarApostas() {
+  if (!uid) return;
+  const body = document.getElementById('painel-body');
+  body.innerHTML = '<p style="color:var(--muted);font-style:italic;text-align:center;padding:24px 0;">A carregar...</p>';
+  try {
+    const [rA, rJ] = await Promise.all([
+      fetch(`${API}/apostas/listar?utilizador=${uid}`),
+      fetch(`${API}/jogos/listar`)
+    ]);
+    const apostas = rA.ok ? await rA.json() : [];
+    const jogos   = rJ.ok ? await rJ.json() : [];
+
+    if (!apostas.length) {
+      body.innerHTML = '<div class="empty-state"><span class="icon">📋</span><p>Ainda não tens apostas.</p></div>';
+      return;
+    }
+
+    const eLabel = { 1:'PENDENTE', 2:'GANHA', 3:'PERDIDA', 4:'ANULADA' };
+    const eCls   = { 1:'e-pendente', 2:'e-ganha', 3:'e-perdida', 4:'e-anulada' };
+
+    body.innerHTML = apostas.map(a => {
+      const e    = Number(a.estado);
+      const jogo = jogos.find(j => j.id == a.idJogo || j.codigo == a.idJogo);
+      const desc = !jogo ? `Jogo ${a.idJogo}`
+        : a.tipo === '1' ? `Vitória ${jogo.equipaCasa}`
+        : a.tipo === 'X' ? 'Empate'
+        : `Vitória ${jogo.equipaFora}`;
+      const jogoNome = jogo ? `${jogo.equipaCasa} vs ${jogo.equipaFora}` : `Jogo ${a.idJogo}`;
+
+      return `<div class="aposta-item">
+        <div class="aposta-top">
+          <span class="aposta-jogo">${jogoNome}</span>
+          <span class="aposta-estado ${eCls[e]||'e-anulada'}">${eLabel[e]||e}</span>
+        </div>
+        <div class="aposta-mid">
+          <div>
+            <span class="aposta-tipo">${desc}</span>
+            <span class="aposta-odd">@ ${parseFloat(a.odd).toFixed(2)}</span>
+          </div>
+          <div class="aposta-values">
+            Apostado: ${parseFloat(a.montante).toFixed(2)}€
+            <strong>Pot. ${parseFloat(a.premioMaximo||0).toFixed(2)}€</strong>
+          </div>
+        </div>
+        ${e === 1 ? `<button class="btn btn-ghost btn-sm" style="margin-top:8px;color:var(--red);border-color:rgba(225,0,20,.3);" onclick="cancelarAposta(${a.id})">Cancelar aposta</button>` : ''}
+      </div>`;
+    }).join('');
+  } catch {
+    body.innerHTML = '<p style="color:var(--muted);font-style:italic;text-align:center;padding:24px 0;">Erro de ligação.</p>';
+  }
+}
+
+async function cancelarAposta(id) {
+  if (!confirm('Tens a certeza que queres cancelar esta aposta?')) return;
+  try {
+    const r = await fetch(`${API}/apostas/cancelar/${id}`, { method: 'POST' });
+    if (r.ok) { toast('Aposta cancelada. Valor reembolsado.', 'ok'); carregarApostas(); carregarSaldo(); }
+    else { toast('Não foi possível cancelar.', 'err'); }
+  } catch { toast('Erro de servidor.', 'err'); }
+}
+
+// ── ARRANQUE ───────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  carregarJogos();
+  setInterval(() => {
+    carregarJogos();
+    if (uid) carregarSaldo();
+  }, 10000);
+});
+</script>
+</body>
+</html>
